@@ -6,6 +6,10 @@ import sys
 from typing import Dict
 import tweepy
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 # Env vars (GitHub Actions'ta secrets olarak eklenecek)
 API_KEY = os.getenv("TWITTER_API_KEY")
 API_KEY_SECRET = os.getenv("TWITTER_API_KEY_SECRET")
@@ -78,7 +82,9 @@ def main():
     counts = read_counts(COUNTS_FILE)
     qid = choose_quote(quotes, counts)
     quote_text = quotes[qid]
-    tweet_text = f"{quote_text}\n\n— Marcus Aurelius"
+    # tweet_text = f"{quote_text}\n\n— Marcus Aurelius"   # sondaki Marcus Aurelius imzasını kaldırdık
+    tweet_text = quote_text
+
 
     print(f"Selected [{qid}]: {quote_text}")
 

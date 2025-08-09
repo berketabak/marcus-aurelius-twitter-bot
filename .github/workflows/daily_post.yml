@@ -1,0 +1,48 @@
+name: Daily Post Quote
+
+on:
+  schedule:
+    # örnek: Istanbul saatiyle 09:00'da çalıştırmak istersen -> 06:00 UTC
+    - cron: '0 9 * * *' 
+  workflow_dispatch: {}  # manuel tetikleme için
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # GITHUB_TOKEN ile push yapılabilsin
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run post script
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_KEY_SECRET: ${{ secrets.TWITTER_API_KEY_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+        run: |
+          python post_quote.py
+
+      - name: Commit counts if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add counts.txt || true
+          if ! git diff --staged --quiet; then
+            git commit -m "Update counts after daily tweet"
+            git push
+          else
+            echo "No changes to commit"
+          fi
