@@ -1,5 +1,8 @@
 name: Daily Post Quote
 
+permissions:
+  contents: write
+
 on:
   schedule:
     # örnek: Istanbul saatiyle 09:00'da çalıştırmak istersen -> 06:00 UTC
