@@ -5,8 +5,9 @@ permissions:
 
 on:
   schedule:
-    # örnek: Istanbul saatiyle 09:00'da çalıştırmak istersen -> 06:00 UTC
-    - cron: '0 9 * * *' 
+    # Tam saatlerdeki GitHub Actions yoğunluğundan kaçınmak için 12:01 İstanbul.
+    - cron: '1 12 * * *'
+      timezone: 'Europe/Istanbul'
   workflow_dispatch: {}  # manuel tetikleme için
 
 jobs:
@@ -15,12 +16,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: true  # GITHUB_TOKEN ile push yapılabilsin
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
