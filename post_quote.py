@@ -3,7 +3,9 @@ import os
 import re
 import random
 import sys
+from datetime import datetime
 from typing import Dict, List, Set
+from zoneinfo import ZoneInfo
 import tweepy
 
 from dotenv import load_dotenv
@@ -54,12 +56,32 @@ def read_recent_quote_ids(path: str, limit: int) -> Set[str]:
     if not os.path.exists(path):
         return set()
     with open(path, encoding="utf-8") as f:
-        entries: List[str] = [line.split("\t", 1)[0].strip() for line in f if line.strip()]
-    return set(entries[-limit:])
+        entries: List[str] = [line.strip() for line in f if line.strip()]
+    quote_ids = []
+    for entry in entries:
+        match = re.search(r"(?:Alıntı #(\d+)|quote_id=(\d+))", entry)
+        if match:
+            quote_ids.append(match.group(1) or match.group(2))
+        else:
+            # Backward compatibility with the original qid<TAB>quote format.
+            legacy_id = re.match(r"(\d+)\t", entry)
+            if legacy_id:
+                quote_ids.append(legacy_id.group(1))
+    return set(quote_ids[-limit:])
 
-def append_to_history(path: str, qid: str, quote_text: str):
+def history_entry_count(path: str) -> int:
+    if not os.path.exists(path):
+        return 0
+    with open(path, encoding="utf-8") as f:
+        return sum(1 for line in f if line.strip())
+
+def append_to_history(path: str, post_number: int, qid: str, quote_text: str):
+    posted_at = datetime.now(ZoneInfo("Europe/Istanbul")).strftime("%Y-%m-%d %H:%M:%S")
     with open(path, "a", encoding="utf-8") as f:
-        f.write(f"{qid}\t{quote_text}\n")
+        f.write(
+            f"Paylaşım #{post_number} | Alıntı #{qid} | "
+            f"Paylaşım zamanı: {posted_at} (TR) | {quote_text}\n"
+        )
 
 def choose_quote(quotes: Dict[str,str], counts: Dict[str,int], excluded_ids: Set[str]) -> str:
     # ensure all quote ids have a count entry
@@ -98,6 +120,7 @@ def main():
     counts = read_counts(COUNTS_FILE)
     recent_quote_ids = read_recent_quote_ids(HISTORY_FILE, HISTORY_LIMIT)
     qid = choose_quote(quotes, counts, recent_quote_ids)
+    post_number = history_entry_count(HISTORY_FILE) + 1
     quote_text = quotes[qid]
     # tweet_text = f"{quote_text}\n\n— Marcus Aurelius"   # sondaki Marcus Aurelius imzasını kaldırdık
     tweet_text = quote_text
@@ -115,7 +138,7 @@ def main():
     # only update counts after successful post
     counts[qid] = counts.get(qid, 0) + 1
     write_counts(COUNTS_FILE, counts)
-    append_to_history(HISTORY_FILE, qid, quote_text)
+    append_to_history(HISTORY_FILE, post_number, qid, quote_text)
     print("Counts and local post history updated.")
 
 if __name__ == "__main__":
