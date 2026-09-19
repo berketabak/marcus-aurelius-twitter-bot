@@ -3,7 +3,7 @@ import os
 import re
 import random
 import sys
-from typing import Dict
+from typing import Dict, List, Set
 import tweepy
 
 from dotenv import load_dotenv
@@ -18,6 +18,8 @@ ACCESS_TOKEN_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
 
 QUOTES_FILE = "quotes.txt"
 COUNTS_FILE = "counts.txt"
+HISTORY_FILE = "posted_quotes.txt"
+HISTORY_LIMIT = 10
 
 def read_quotes(path: str) -> Dict[str,str]:
     quotes = {}
@@ -48,13 +50,27 @@ def write_counts(path: str, counts: Dict[str,int]):
         for k,v in items:
             f.write(f"{k}-{v}\n")
 
-def choose_quote(quotes: Dict[str,str], counts: Dict[str,int]) -> str:
+def read_recent_quote_ids(path: str, limit: int) -> Set[str]:
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        entries: List[str] = [line.split("\t", 1)[0].strip() for line in f if line.strip()]
+    return set(entries[-limit:])
+
+def append_to_history(path: str, qid: str, quote_text: str):
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(f"{qid}\t{quote_text}\n")
+
+def choose_quote(quotes: Dict[str,str], counts: Dict[str,int], excluded_ids: Set[str]) -> str:
     # ensure all quote ids have a count entry
     for qid in quotes:
         counts.setdefault(qid, 0)
-    # find min count
-    min_count = min(counts[qid] for qid in quotes)
-    candidates = [qid for qid in quotes if counts[qid] == min_count]
+    eligible_ids = [qid for qid in quotes if qid not in excluded_ids]
+    # If there are fewer quotes than the history window, allow repeats.
+    if not eligible_ids:
+        eligible_ids = list(quotes)
+    min_count = min(counts[qid] for qid in eligible_ids)
+    candidates = [qid for qid in eligible_ids if counts[qid] == min_count]
     chosen = random.choice(candidates)
     return chosen
 
@@ -80,7 +96,8 @@ def main():
         sys.exit(1)
 
     counts = read_counts(COUNTS_FILE)
-    qid = choose_quote(quotes, counts)
+    recent_quote_ids = read_recent_quote_ids(HISTORY_FILE, HISTORY_LIMIT)
+    qid = choose_quote(quotes, counts, recent_quote_ids)
     quote_text = quotes[qid]
     # tweet_text = f"{quote_text}\n\n— Marcus Aurelius"   # sondaki Marcus Aurelius imzasını kaldırdık
     tweet_text = quote_text
@@ -98,7 +115,8 @@ def main():
     # only update counts after successful post
     counts[qid] = counts.get(qid, 0) + 1
     write_counts(COUNTS_FILE, counts)
-    print("Counts updated.")
+    append_to_history(HISTORY_FILE, qid, quote_text)
+    print("Counts and local post history updated.")
 
 if __name__ == "__main__":
     main()
