@@ -5,9 +5,8 @@ permissions:
 
 on:
   schedule:
-    # Tam saatlerdeki GitHub Actions yoğunluğundan kaçınmak için 12:01 İstanbul.
-    - cron: '1 12 * * *'
-      timezone: 'Europe/Istanbul'
+    # 09:01 UTC = 12:01 Türkiye; saat başı yoğunluğundan kaçınır.
+    - cron: '1 9 * * *'
   workflow_dispatch: {}  # manuel tetikleme için
 
 jobs:
