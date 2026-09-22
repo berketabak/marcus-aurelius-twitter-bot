@@ -6,7 +6,7 @@ permissions:
 on:
   schedule:
     # 09:01 UTC = 12:01 Türkiye; saat başı yoğunluğundan kaçınır.
-    - cron: '1 9 * * *'
+    - cron: '39 8 * * *'
   workflow_dispatch: {}  # manuel tetikleme için
 
 jobs:
